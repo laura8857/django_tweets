@@ -25,13 +25,31 @@
         var tweetList = [];
         var nextTweetUrl;
 
-        function attachTweet(tweetvalue,prepend){
+        function updateHashLinks(){
+          $(".media-body").each(function(datat){
+            var hashtagRqgex= /(^|\s)#([\w\d-]+)/g
+            var newText = $(this).html().replace(hashtagRqgex,"$1<a href='/tags/$2/'>#$2</a>")
+            $(this).html(newText)
+          })
+        }
+
+        function attachTweet(tweetvalue,prepend,retweet){
           var dateDisplay = tweetvalue.date_display;
           var tweetContent = tweetvalue.content;
           var tweetUser = tweetvalue.user;
-          var tweetFormattedHtml = "<div class=\"media\"><div class=\"media-body\">" + tweetContent + "<br>"+
-          "via <a href='" + tweetUser.url+ "'>" +tweetUser.username + "</a> | "+dateDisplay + " | " +
-          "<a href=#>View</a>" +"</div></div><hr>"
+          var tweetFormattedHtml;
+          if (retweet && tweetvalue.parent){
+            var mainTweet = tweetvalue.parent
+            tweetFormattedHtml = "<div class=\"media\"><div class=\"media-body\"><span class ='grey-color'>Retweet via "+tweetUser.username +" on "+
+            dateDisplay +"</span><br/>"+ mainTweet.content + "<br/>"+
+            "via <a href='" + mainTweet.user.url+ "'>" +mainTweet.user.username + "</a> | "+mainTweet.date_display + " | " +
+            "<a href='/tweet/"+mainTweet.id+"'>View</a>" +"</div></div><hr>"
+          }else {
+            tweetFormattedHtml = "<div class=\"media\"><div class=\"media-body\">" + tweetContent + "<br>"+
+            "via <a href='" + tweetUser.url+ "'>" +tweetUser.username + "</a> | "+dateDisplay + " | " +
+            "<a href='/tweet/"+tweetvalue.id+"'>View</a>" +"</div></div><hr>"
+          }
+
 
           if (prepend==true){
             $("#tweet-container").prepend(tweetFormattedHtml)
@@ -47,7 +65,11 @@
                 // tweets exist
                 $.each(tweetList, function(key,value){
                         var tweetKey = key;
-                        attachTweet(value)
+                        if (value.parent){
+                          attachTweet(value,false,true)
+                        }else{
+                          attachTweet(value)
+                        }
                     })
             }
         }
@@ -77,6 +99,7 @@
                     }
 
                     parseTweets()
+                    updateHashLinks()
                 },
                 error:function(data){
                     console.log("error")
@@ -131,6 +154,7 @@
                       // 找input[type=text],textarea的element ,使其value為空值
                       this_.find("input[type=text],textarea").val("")
                       attachTweet(data,true)
+                      updateHashLinks()
 
                   },
                   error:function(data){
