@@ -1,8 +1,12 @@
 from django.db import models
 from django.conf import settings
 from django.urls import reverse
+from django.utils import timezone
+from django.db.models.signals import post_save
+import re
 
 from .validators import validate_content
+from hashtags.signals import parsed_hashtags
 
 # Create your models here.
 
@@ -15,10 +19,15 @@ class TweetManager(models.Manager):
             og_parent = parent_obj
 
         # retweet之前 先檢查該tweet是否為retweet的 避免重複retweet 的retweet
-        qs = self.get_queryset().filter(user = user,parent = parent_obj)
+        qs = self.get_queryset().filter(
+            user = user, parent = og_parent
+        ).filter(
+            timestamp__year = timezone.now().year,
+            timestamp__month=timezone.now().month,
+            timestamp__day=timezone.now().day
+        )
         if qs.exists():
             return None
-
         obj = self.model(
             parent =og_parent,
             user = user,
@@ -50,3 +59,20 @@ class Tweet(models.Model):
     #     if content =="abc":
     #         raise ValidationError("Content cannot be ABC")
     #     return super(Tweet,self).clean(*args,**kwargs)
+
+
+def tweet_save_receiver(sender,instance,created,*args,**kwargs):
+    if created and not instance.parent: #if tweet is created
+        # notify user
+        user_regex = r'@(?P<username>[\w.@+-]+)'
+        usernames = re.findall(user_regex,instance.content)
+        # send notification to user
+
+
+        hash_regex = r'#(?P<hashtag>[\w\d-]+)'
+        hashtags = re.findall(hash_regex,instance.content)
+        parsed_hashtags.send(sender=instance.__class__,hashtag_list = hashtags)
+        #send hashtag signal to user
+
+
+post_save.connect(tweet_save_receiver,sender=Tweet)
