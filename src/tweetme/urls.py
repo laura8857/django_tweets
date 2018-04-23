@@ -30,6 +30,7 @@ urlpatterns = [
     url(r'^tweet/',include('tweets.urls',namespace="tweet")),
     url(r'^',include('accounts.urls',namespace="profiles")),
     url(r'^api/tweet/',include('tweets.api.urls',namespace="tweet-api")),
+    url(r'^api/',include('accounts.api.urls',namespace="profiles-api")),
 
 ]
 

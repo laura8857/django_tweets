@@ -35,15 +35,28 @@ class TweetListAPIView(generics.ListAPIView):
     pagination_class = StandardResultPagination
 
     def get_queryset(self,*args,**kwargs):
-        im_follow = self.request.user.profile.get_following()
-        qs1 = Tweet.objects.filter(user__in=im_follow)
-        qs2 = Tweet.objects.filter(user=self.request.user)
-        qs = (qs1|qs2).distinct().order_by("-timestamp")
-        # print(self.request.GET)
-        query = self.request.GET.get("q",None)
-        if query is not None:
-            qs = qs.filter(
-                Q(content__icontains = query) |
-                Q(user__username__icontains = query)
-                           )
-        return qs
+        requested_user =self.kwargs.get("username")
+        if requested_user:
+            qs = Tweet.objects.filter(user__username=requested_user).order_by("-timestamp")
+            # qs = (qs1 | qs2).distinct().order_by("-timestamp")
+            # print(self.request.GET)
+            query = self.request.GET.get("q", None)
+            if query is not None:
+                qs = qs.filter(
+                    Q(content__icontains=query) |
+                    Q(user__username__icontains=query)
+                )
+            return qs
+        else:
+            im_following = self.request.user.profile.get_following()
+            qs1 = Tweet.objects.filter(user__in=im_following)
+            qs2 = Tweet.objects.filter(user=self.request.user)
+            qs = (qs1|qs2).distinct().order_by("-timestamp")
+            # print(self.request.GET)
+            query = self.request.GET.get("q",None)
+            if query is not None:
+                qs = qs.filter(
+                    Q(content__icontains = query) |
+                    Q(user__username__icontains = query)
+                               )
+            return qs
